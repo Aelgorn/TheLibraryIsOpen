@@ -87,6 +87,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TheLibraryIsOpen.Models.DBModels;
+using TheLibraryIsOpen.Models;
 using static TheLibraryIsOpen.Constants.TypeConstants;
 
 namespace TheLibraryIsOpen.Database
@@ -3258,6 +3259,89 @@ namespace TheLibraryIsOpen.Database
             StringBuilder sb = new StringBuilder($"DELETE FROM logs WHERE transactionDate <= \"{date.ToString("yyyy-MM-dd HH:mm:ss")}\"");
 
             QuerySend(sb.ToString());
+        }
+
+        public List<Log> TransactionUpdate(int clientID, List<Log> transactionList)
+        {
+            
+            List<Log> logs = null;
+            List<ModelCopy> items = null;
+
+            string query = $"SELECT MAX(logID) FROM logs";
+
+            int lastLogID = int.Parse(query);
+
+            for(int i = 0; i< transactionList.Count; i++)
+            {
+                
+                switch (transactionList[i].Transaction)
+                {
+                    case TransactionType.Borrow:
+                        {
+                            Log newLog = new Log();
+                           
+                            newLog.ClientID = clientID;
+                            newLog.ModelID = transactionList[i].ModelID;
+                            newLog.ModelType = transactionList[i].ModelType;
+                            newLog.TransactionTime = DateTime.Now;
+
+                            items = FindModelCopiesOfModel(transactionList[i].ModelID, transactionList[i].ModelType, BorrowType.Borrowed);
+
+                            if (items.Count > 0)
+                            {
+                                newLog.LogID = lastLogID;
+
+                                items[0].borrowerID = clientID;
+                                items[0].borrowedDate = newLog.TransactionTime;
+                                items[0].returnDate = items[0].borrowedDate.AddDays(7.0d);
+                                lastLogID++;
+
+                                newLog.ModelCopyID = items[0].id;
+
+                                newLog.Transaction = transactionList[i].Transaction;
+                                AddLog(newLog);
+                                logs.Add(newLog);
+                            }
+                            
+                            break;
+                        }
+                    case TransactionType.Return:
+                        {
+                            Log newLog = new Log();
+                            
+                            newLog.ClientID = clientID;
+                            newLog.ModelID = transactionList[i].ModelID;
+                            newLog.ModelType = transactionList[i].ModelType;
+                            newLog.TransactionTime = DateTime.Now;
+
+                            items = FindModelCopiesOfModel(transactionList[i].ModelID, transactionList[i].ModelType, BorrowType.Borrowed);
+
+                            if (items.Count > 0)
+                            {
+                                newLog.LogID = lastLogID;
+
+                                items[0].borrowerID = 0;
+                                items[0].borrowedDate = new DateTime();
+                                items[0].returnDate = new DateTime();
+                                lastLogID++;
+                                
+                                newLog.ModelCopyID = items[0].id;
+                                
+                                newLog.Transaction = transactionList[i].Transaction;
+                                AddLog(newLog);
+                                logs.Add(newLog);
+                            }
+
+                            break;
+                        }
+                    default:
+                        {
+                            break;
+                        }
+                }
+            }
+
+                return logs;
         }
         #endregion
 

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TheLibraryIsOpen.Database;
 using TheLibraryIsOpen.Models.DBModels;
+using TheLibraryIsOpen.Models;
 using static TheLibraryIsOpen.Constants.TypeConstants;
 
 namespace TheLibraryIsOpen.db
@@ -715,9 +716,47 @@ namespace TheLibraryIsOpen.db
              return logToFind;});
         }
 
-        // TODO: public List<SessionModel> TransactionUpdate() {}
+        public Task<List<SessionModel>> TransactionUpdate(int clientID, List<SessionModel> itemList)
+        {
+            return Task.Factory.StartNew(() => {
+                List<Log> logList = new List<Log>();
+                List<SessionModel> errorSession = null;
+                foreach(SessionModel sItem in itemList)
+                {
+                    Log tLog = new Log();
+                    tLog.ClientID = clientID;
+                    tLog.ModelID = sItem.Id;
+                    tLog.ModelType = sItem.ModelType;
+                    logList.Add(tLog);
+                }
 
+                logList = _db.TransactionUpdate(clientID, logList);
+                Log[] logsArray = new Log[logList.Count];
 
+                for (int i = 0; i < logList.Count; i++)
+                {
+                    logsArray[i] = logList[i];
+                    bool error = true;
+                    foreach (SessionModel check in itemList)
+                    {
+                        if(logsArray[i].ModelID == check.Id && logsArray[i].ModelType == check.ModelType)
+                        {
+                            error = false;
+                            break;
+                        }
+                    }
+                    if(error)
+                    {
+                        SessionModel eSession = new SessionModel();
+                        eSession.Id = logsArray[i].ModelID;
+                        eSession.ModelType = logsArray[i].ModelType;
+                        errorSession.Add(eSession);
+                    }
+                }
+                AddAsync(logsArray);
+                return errorSession;
+            });
+        }
 
     }
 }
