@@ -733,9 +733,13 @@ namespace TheLibraryIsOpen.db
                 logList = _db.TransactionUpdate(clientID, logList);
                 Log[] logsArray = new Log[logList.Count];
 
+                List<ModelCopy> copyUpdate = new List<ModelCopy>();
+
+
                 for (int i = 0; i < logList.Count; i++)
                 {
                     logsArray[i] = logList[i];
+                    copyUpdate.Add(_db.GetModelCopyById(logList[i].ModelCopyID));
                     bool error = true;
                     foreach (SessionModel check in itemList)
                     {
@@ -753,6 +757,7 @@ namespace TheLibraryIsOpen.db
                         errorSession.Add(eSession);
                     }
                 }
+                EditAsync(copyUpdate.ToArray());
                 AddAsync(logsArray);
                 return errorSession;
             });
